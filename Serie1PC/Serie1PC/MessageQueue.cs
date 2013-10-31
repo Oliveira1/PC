@@ -11,13 +11,15 @@ namespace Serie1PC
     {
         public class Message<T>
         {
-            public sealed uint value;
-            public sealed T msg;
+            public  Predicate<uint> pred;
+            public  uint value;
+            public  T msg;
+            public Boolean taken;
         }
-
-        private sealed LinkedList<Message<T>> _message = new LinkedList<Message<T>>();
-        private sealed LinkedList<Message<T>> _blocked = new LinkedList<Message<T>>();
-        private sealed int _capacity;
+        private  LinkedList<Message<T>> _senders = new LinkedList<Message<T>>();
+        private  LinkedList<Message<T>> _message = new LinkedList<Message<T>>();
+        private  LinkedList<Message<T>> _receivers = new LinkedList<Message<T>>();
+        private  int _capacity;
 
 
         /*
@@ -31,68 +33,85 @@ namespace Serie1PC
 
         public void send(Message<T> msg)
         {
-            lock (_message)
+            lock (this)
             {
                 if (_message.Count < _capacity)
                 {
-                    if (_blocked.Count == 0)
+                    if (_receivers.Count == 0)
                     {
                         _message.AddLast(msg);
                         return;
                     }
-                   // SetMessage(msg); // se este método existir o predicate do receive deixa de fazer sentido.
-                    // se não existir optimizar este troço.
-                    _message.AddLast(msg);
-                    Monitor.PulseAll(_message);
-                    return;
-
-
+                    if (SetMessage(msg)) return;
                 }
+                Message<T> myMsg = new Message<T>();
+                myMsg.msg = msg.msg;
+                myMsg.value = msg.value;
+                _senders.AddLast(myMsg);
                 while (true)
                 {
-                    Monitor.Wait(_message);
+                    Monitor.Wait(this);
+                    if (myMsg.taken) return;
                     if (_message.Count < _capacity)
                     {
                         _message.AddLast(msg);
-                        Monitor.PulseAll(_message);
+                        Monitor.PulseAll(this);
                         return;
                     }
                 }
             }
         }
         
-        public Message<T> Receive(Predicate<int> predicate)
+        public T Receive(Predicate<uint> predicate)
         {
-            lock(_message){
-                Message<T> myMsg=new Message<T>();
+            lock(this){
+                Message<T> myMsg= new Message<T>();
             if (_message.Count != 0)
             {
-               myMsg=getMessage(predicate);
-               Monitor.PulseAll(_message);
-               return myMsg;
+               getMessage(predicate,ref myMsg,ref _message);
+               Monitor.PulseAll(this);
+               return myMsg.msg;
             }
-                _blocked.AddLast(myMsg);
+
+                if (_senders.Count != 0)
+                {
+                    getMessage(predicate,ref myMsg,ref _senders);
+                    Monitor.PulseAll(this);
+                    return myMsg.msg;
+                }
+                myMsg.pred = predicate;
+                _receivers.AddLast(myMsg);
             while (true)
             {
-                Monitor.Wait(_message);
-                /*implementar depois da duvida*/
+                Monitor.Wait(this);
+                if (myMsg.taken) return myMsg.msg;
             }
           }
         }
 
-        private Message<T> getMessage(Predicate<int> predicate)
+        private void getMessage(Predicate<uint> predicate, ref Message<T> myMsg, ref LinkedList<Message<T>> list)
         {
-            throw new NotImplementedException();
+            foreach (Message<T> elem in list)
+            
+                if (predicate(elem.value))
+                {
+                    myMsg.msg = elem.msg;
+                    elem.taken = true;
+                    _receivers.Remove(elem);
+                    Monitor.PulseAll(this);
+                    return;
+                }
+            
         }
         //Metodo específico de delegação Execução de Threads
         private Boolean SetMessage(Message<T> msg)
         {
-            foreach(Message<T> elem in _blocked)
-                if (elem.value == msg.value)
+            foreach(Message<T> elem in _receivers)
+                if (elem.pred(msg.value))
                 {
                     elem.msg = msg.msg;
-                    _blocked.Remove(elem);
-                    Monitor.PulseAll(_message);
+                    _receivers.Remove(elem);
+                    Monitor.PulseAll(this);
                     return true;
                 }
             return false;
