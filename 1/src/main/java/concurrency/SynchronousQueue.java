@@ -12,7 +12,7 @@ public class SynchronousQueue<T> {
 	 // falta verificar o primeiro elemento se é null para saber se e um take
 	public void put(T obj) throws InterruptedException{
 		synchronized(_blocking){
-			if(!_blocking.isEmpty() && !(_blocking.getFirst()==null)){
+			if(!_blocking.isEmpty() && (_blocking.getFirst().item==null)){
 				putMessage(obj);
 				_blocking.notifyAll();
 				return;
@@ -38,7 +38,7 @@ public class SynchronousQueue<T> {
 	public T take() throws InterruptedException{
 		synchronized (_blocking) {
 			T item =null;
-			if(!_blocking.isEmpty() && !(_blocking.getFirst()==null)){
+			if(!_blocking.isEmpty() && !(_blocking.getFirst().item==null)){
 				item=takeMessage();
 				_blocking.notifyAll();
 				return item;
