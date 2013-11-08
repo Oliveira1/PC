@@ -1,4 +1,4 @@
-package SynchronousQueueTests.copy;
+package test.SynchronousQueue;
 
 import static org.junit.Assert.*;
 
@@ -10,7 +10,7 @@ import junit.framework.AssertionFailedError;
 import org.junit.Test;
 
 import concurrency.SynchronousQueue;
-public class TestWithTwoThreads {
+public class TestSynchronousQueue {
 
 	@Test
 	public void withTwoThreads() throws InterruptedException{
@@ -65,7 +65,9 @@ public class TestWithTwoThreads {
 	}
 
 	/*DUVIDA : Como testar a fifo */
-	/*BUG: actualmente pode haver um context switch entre o registo to tempo e o take e nem sempre a thread que se iniciou a mais tempo é a que chama o take primeiro.*/
+	/*BUG: actualmente pode haver um context switch entre o 
+	 * registo to tempo e o take e nem sempre a thread que se 
+	 * iniciou a mais tempo é a que chama o take primeiro.*/
 	@Test
 	public void withSeverallBlockingTakesRespectingFIFO() throws InterruptedException{
 		final SynchronousQueue<Integer> sync=new SynchronousQueue<Integer>();
