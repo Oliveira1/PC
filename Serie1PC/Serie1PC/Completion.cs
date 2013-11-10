@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Serie1PC
 {
-    class Completion
+    public class Completion
     {
         private int _permits;
         private Boolean _complete;

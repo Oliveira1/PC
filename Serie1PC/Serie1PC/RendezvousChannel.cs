@@ -10,18 +10,18 @@ namespace Serie1PC
     {
         public bool Request(S service,int timeout, out R response)
         {
-        
+            throw new NotImplementedException();     
         }
 
     public  object Accept(int timeout, out S service)
-        {
-            
-        }
+    {
+        throw  new NotImplementedException();
+    }
 
 
-        void Reply(object rendezVousToken, R Response)
+       public void Reply(object rendezVousToken, R Response)
         {
-            
+            throw new NotImplementedException();    
         }
     }
 }
