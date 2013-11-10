@@ -11,9 +11,16 @@ namespace TestsSerie1Pc
         [TestMethod]
         public void TestCompleteAndWaitMethodWithTwoThreads()
         {
+            var myEvent = new ManualResetEvent(false);
             var synchronizer = new Completion();
-            var producer = new Thread(synchronizer.WaitForCompletion);
+            var producer = new Thread(() =>
+            {
+                myEvent.Set();
+                synchronizer.WaitForCompletion();
+
+            });
             producer.Start();
+            myEvent.WaitOne();
             synchronizer.Complete();
             producer.Join();
         }
@@ -37,8 +44,11 @@ namespace TestsSerie1Pc
                 });
                 producer.Start();
             }
+            waitingForAllThreadsToStart.Wait();
             synchronizer.CompleteAll();
             waitingForAllThreadsToEnd.Wait();
+            
+
             waitingForAllThreadsToStart.Reset();
             waitingForAllThreadsToEnd.Reset();
             for (var i = 0; i < MAX_PROCESSORS; i++)
@@ -53,9 +63,7 @@ namespace TestsSerie1Pc
                 });
                 producer.Start();
             }
-
             waitingForAllThreadsToEnd.Wait();
-
         }
 
 
