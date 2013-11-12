@@ -9,50 +9,38 @@ namespace Serie1PC
 {
     public class MessageQueue<T>
     {
-        public class Message<T>
-        {
-            public  Predicate<uint> pred;
-            public  uint value;
-            public  T msg;
-            public Boolean taken;
-        }
         private  LinkedList<Message<T>> _senders = new LinkedList<Message<T>>();
         private  LinkedList<Message<T>> _message = new LinkedList<Message<T>>();
-        private  LinkedList<Message<T>> _receivers = new LinkedList<Message<T>>();
-        private  int _capacity;
+        private readonly LinkedList<Message<T>> _receivers = new LinkedList<Message<T>>();
+        private readonly int _capacity;
 
-
-        /*
-         * Duvida sobre este Sincronizador se há delegação de execução as threads esperam numa fila _blocked 
-         * se não é preciso delegação de execução podem esperar na fila de _message;
-         */
         public MessageQueue(int capacity)
         {
             _capacity = capacity;
         }
 
-        public void send(Message<T> msg)
+        public void Send(Message<T> msg)
         {
             lock (this)
             {
-                if (_message.Count < _capacity)
+                if (_receivers.Count != 0)
                 {
-                    if (_receivers.Count == 0)
-                    {
-                        _message.AddLast(msg);
-                        return;
-                    }
                     if (SetMessage(msg)) return;
                 }
-                Message<T> myMsg = new Message<T>();
-                myMsg.msg = msg.msg;
-                myMsg.value = msg.value;
+                if (_message.Count != _capacity)
+                {
+                    _message.AddLast(msg);
+                    return;
+                }
+                var myMsg = new Message<T>();
+                myMsg.content = msg.content;
+                myMsg.type = msg.type;
                 _senders.AddLast(myMsg);
                 while (true)
                 {
                     Monitor.Wait(this);
                     if (myMsg.taken) return;
-                    if (_message.Count < _capacity)
+                    if (_message.Count != _capacity)
                     {
                         _message.AddLast(msg);
                         Monitor.PulseAll(this);
@@ -65,26 +53,24 @@ namespace Serie1PC
         public T Receive(Predicate<uint> predicate)
         {
             lock(this){
-                Message<T> myMsg= new Message<T>();
+               var myMsg= new Message<T>();
             if (_message.Count != 0)
             {
                getMessage(predicate,ref myMsg,ref _message);
-               Monitor.PulseAll(this);
-               return myMsg.msg;
+               return myMsg.content;
             }
 
                 if (_senders.Count != 0)
                 {
                     getMessage(predicate,ref myMsg,ref _senders);
-                    Monitor.PulseAll(this);
-                    return myMsg.msg;
+                    return myMsg.content;
                 }
                 myMsg.pred = predicate;
                 _receivers.AddLast(myMsg);
             while (true)
             {
                 Monitor.Wait(this);
-                if (myMsg.taken) return myMsg.msg;
+                if (myMsg.taken) return myMsg.content;
             }
           }
         }
@@ -93,9 +79,9 @@ namespace Serie1PC
         {
             foreach (Message<T> elem in list)
             
-                if (predicate(elem.value))
+                if (predicate.Invoke(elem.type))
                 {
-                    myMsg.msg = elem.msg;
+                    myMsg.content = elem.content;
                     elem.taken = true;
                     _receivers.Remove(elem);
                     Monitor.PulseAll(this);
@@ -107,9 +93,10 @@ namespace Serie1PC
         private Boolean SetMessage(Message<T> msg)
         {
             foreach(Message<T> elem in _receivers)
-                if (elem.pred(msg.value))
+                if (elem.pred.Invoke(msg.type))
                 {
-                    elem.msg = msg.msg;
+                    elem.content = msg.content;
+                    elem.taken = true;
                     _receivers.Remove(elem);
                     Monitor.PulseAll(this);
                     return true;
