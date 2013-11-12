@@ -90,7 +90,7 @@ namespace TestsSerie1Pc
                     myMsg.content = 1;
                     waitingToStart.Signal();
                    synchronizer.Send(myMsg);
-                  waitingToEnd.Signal();
+                //  waitingToEnd.Signal();
                 });
                 consumer.Start();
             }
@@ -101,7 +101,7 @@ namespace TestsSerie1Pc
                 var result=synchronizer.Receive(CompareEquals);
                 Assert.AreEqual(result,1);
             }
-            waitingToEnd.Wait();
+         //   waitingToEnd.Wait();
         }
 
         private Boolean CompareEquals( uint value)

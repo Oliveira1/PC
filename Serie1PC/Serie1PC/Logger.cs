@@ -8,11 +8,11 @@ using System.Threading.Tasks;
 
 namespace Serie1PC
 {
-    class Logger
+   public class Logger
     {
         private Thread _loggerThread;
         private readonly TextWriter _writeBuffer;
-        private readonly LinkedList<String> _logsQueue = new LinkedList<String>();
+        private  LinkedList<String> _logsQueue = new LinkedList<String>();
         private volatile Boolean _stop;
         private const int CAPACITY= 10;
 
@@ -33,22 +33,22 @@ namespace Serie1PC
             _loggerThread.Priority = ThreadPriority.Lowest; 
         }
 
-        private void Start()
+        public void Start()
         {
             if (!_loggerThread.IsAlive)
                 _loggerThread.Start();
         }
 
-        private void Stop()
+        public void Stop()
         {
             if (!_loggerThread.IsAlive) return;
             _stop = true;
         }
 
-        private void LogMessage(String msg)
+        public void LogMessage(String msg)
         {
             if (_stop) throw new Exception(); //undefined
-            lock(_logsQueue)
+            lock(this)
             {
                 if (_logsQueue.Count < CAPACITY)
                 {
@@ -63,7 +63,7 @@ namespace Serie1PC
                 }
                 while (true)
                 {
-                    Monitor.Wait(_logsQueue);
+                    Monitor.Wait(this);
                     if (_stop) throw new Exception(); //undefined
                     if (_logsQueue.Count < CAPACITY)
                     {
@@ -81,11 +81,13 @@ namespace Serie1PC
             {
                 lock (_logsQueue)
                 {
-                  buffer = new LinkedList<string>(_logsQueue);
+                    buffer = _logsQueue;
+                    _logsQueue=new LinkedList<string>();
+                  //buffer = new LinkedList<string>(_logsQueue);
                         //copia para o stack para não estar dependente do IO e minimizar o tempo de lock
-                    _logsQueue.Clear();
+                  
                 }
-                Monitor.PulseAll(_logsQueue); //qual a dif entre por isto dentro e fora do lock?
+                Monitor.PulseAll(this);
                 foreach (var elem in buffer) // este buffer por ir a null? acho que não
                 {
                     _writeBuffer.Write(elem);
