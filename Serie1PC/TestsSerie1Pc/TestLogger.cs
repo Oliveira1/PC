@@ -37,6 +37,12 @@ namespace TestsSerie1Pc
                 synchronizer.Stop();
 
             }
+
+            using (TextWriter write = File.CreateText("./logger.txt"))
+            {
+
+            }
+
         }
  
        

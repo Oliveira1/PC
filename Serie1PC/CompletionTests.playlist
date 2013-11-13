@@ -1,0 +1,1 @@
+<Playlist Version="1.0"><Add Test="TestsSerie1Pc.TestCompletion.TestCompleteAndWaitMethodWithTwoThreads" /><Add Test="TestsSerie1Pc.TestCompletion.TestCompleteAllMethod" /></Playlist>

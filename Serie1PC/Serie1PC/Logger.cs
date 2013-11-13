@@ -61,6 +61,12 @@ namespace Serie1PC
                     _logsQueue.AddLast(msg);
                     return;
                 }
+                if (_logsQueue.Count == CAPACITY && _loggerThread.IsAlive)
+                {
+                    _logsQueue.RemoveFirst();
+                    _logsQueue.AddLast(msg);
+                    return;
+                }
                 while (true)
                 {
                     Monitor.Wait(this);
@@ -87,12 +93,12 @@ namespace Serie1PC
                         //copia para o stack para não estar dependente do IO e minimizar o tempo de lock
                   
                 }
-                Monitor.PulseAll(this);
+                Monitor.Pulse(this);
                 foreach (var elem in buffer) // este buffer por ir a null? acho que não
                 {
                     _writeBuffer.Write(elem);
                 }
-                if (_stop && _logsQueue.Count == 0) return;
+                if (_stop && _logsQueue.Count == 0) Monitor.Wait(this);
             }
         }
     }

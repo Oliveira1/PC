@@ -83,7 +83,7 @@ namespace Serie1PC
                 {
                     myMsg.content = elem.content;
                     elem.taken = true;
-                    _receivers.Remove(elem);
+                    list.Remove(elem);
                     Monitor.PulseAll(this);
                     return;
                 }
