@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
+
 
 namespace Serie1PC
 {
@@ -25,7 +24,7 @@ namespace Serie1PC
             {
                 if (_receivers.Count != 0)
                 {
-                    if (SetMessage(msg)) return;
+                    if (SetMessageinReceiversQueue(msg)) return;
                 }
                 if (_message.Count != _capacity)
                 {
@@ -40,12 +39,6 @@ namespace Serie1PC
                 {
                     Monitor.Wait(this);
                     if (myMsg.taken) return;
-                    if (_message.Count != _capacity)
-                    {
-                        _message.AddLast(msg);
-                        Monitor.PulseAll(this);
-                        return;
-                    }
                 }
             }
         }
@@ -56,13 +49,14 @@ namespace Serie1PC
                var myMsg= new Message<T>();
             if (_message.Count != 0)
             {
-               getMessage(predicate,ref myMsg,ref _message);
+               GetMessagefromList(predicate,ref myMsg,ref _message);
+               RemoveFirstSenderFromQueue();
                return myMsg.content;
             }
 
                 if (_senders.Count != 0)
                 {
-                    getMessage(predicate,ref myMsg,ref _senders);
+                    GetMessagefromList(predicate,ref myMsg,ref _senders);
                     return myMsg.content;
                 }
                 myMsg.pred = predicate;
@@ -75,7 +69,20 @@ namespace Serie1PC
           }
         }
 
-        private void getMessage(Predicate<uint> predicate, ref Message<T> myMsg, ref LinkedList<Message<T>> list)
+        private void RemoveFirstSenderFromQueue()
+        {
+            if (_senders.Count != 0)
+            {
+                Message<T> msg=_senders.First();
+                msg.taken = true;
+                _senders.Remove(msg);
+                _message.AddLast(msg);
+                Monitor.PulseAll(this);
+
+            }
+        }
+
+        private void GetMessagefromList(Predicate<uint> predicate, ref Message<T> myMsg, ref LinkedList<Message<T>> list)
         {
             foreach (Message<T> elem in list)
             
@@ -89,8 +96,8 @@ namespace Serie1PC
                 }
             
         }
-        //Metodo específico de delegação Execução de Threads
-        private Boolean SetMessage(Message<T> msg)
+        
+        private Boolean SetMessageinReceiversQueue(Message<T> msg)
         {
             foreach(Message<T> elem in _receivers)
                 if (elem.pred.Invoke(msg.type))

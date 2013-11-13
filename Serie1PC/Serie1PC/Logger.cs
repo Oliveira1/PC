@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Serie1PC
 {
@@ -13,8 +10,16 @@ namespace Serie1PC
         private Thread _loggerThread;
         private readonly TextWriter _writeBuffer;
         private  LinkedList<String> _logsQueue = new LinkedList<String>();
-        private volatile Boolean _stop;
-        private const int CAPACITY= 10;
+        private  Status _stop;
+
+       private  enum Status
+       {
+           Running=0,
+           Stopping,
+           Stopped
+       }
+
+       private const int CAPACITY= 10;
 
         public Logger(TextWriter writeTo)
         {
@@ -22,83 +27,81 @@ namespace Serie1PC
             if (writeTo == null)
                 throw new NullReferenceException();
             _writeBuffer = writeTo;
-            _stop = false;
-            initLogger();
+            _stop = Status.Running;
+            InitLogger();
            }
 
-        private void initLogger()
+        private void InitLogger()
         {
-            _loggerThread = new Thread(new ThreadStart(write));
-            _loggerThread.Name = "Logger"; // for debugging purpose only
-            _loggerThread.Priority = ThreadPriority.Lowest; 
+            _loggerThread = new Thread(Write) {Name = "Logger", Priority = ThreadPriority.Lowest};
         }
 
         public void Start()
         {
-            if (!_loggerThread.IsAlive)
+            if(_stop==Status.Running && !_loggerThread.IsAlive)
                 _loggerThread.Start();
         }
 
         public void Stop()
         {
-            if (!_loggerThread.IsAlive) return;
-            _stop = true;
+            lock (this)
+            {
+                if (!_loggerThread.IsAlive) return;
+                _stop = Status.Stopping; 
+                while (true)
+                {
+                    Monitor.Wait(this);
+                    if (_stop == Status.Stopped) return;
+                }
+            }
         }
 
-        public void LogMessage(String msg)
+        public Boolean LogMessage(String msg)
         {
-            if (_stop) throw new Exception(); //undefined
+            if (_stop==Status.Stopped) throw new Exception(); //undefined
             lock(this)
             {
                 if (_logsQueue.Count < CAPACITY)
                 {
                     _logsQueue.AddLast(msg);
-                    return;
+                    return true;
                 }
-                if (_logsQueue.Count == CAPACITY && !_loggerThread.IsAlive)
+                if (_logsQueue.Count == CAPACITY)
                 {
                     _logsQueue.RemoveFirst();
                     _logsQueue.AddLast(msg);
-                    return;
-                }
-                if (_logsQueue.Count == CAPACITY && _loggerThread.IsAlive)
-                {
-                    _logsQueue.RemoveFirst();
-                    _logsQueue.AddLast(msg);
-                    return;
-                }
-                while (true)
-                {
-                    Monitor.Wait(this);
-                    if (_stop) throw new Exception(); //undefined
-                    if (_logsQueue.Count < CAPACITY)
-                    {
-                        _logsQueue.AddLast(msg);
-                        return;
-                    }
+                    return true;
                 }
             }
+            return false;
         }
 
-        private void write()
+        private void Write()
         {
-           LinkedList<string> buffer;
+           var buffer=new LinkedList<string>();
             while (true)
             {
-                lock (_logsQueue)
+                lock (this)
                 {
-                    buffer = _logsQueue;
-                    _logsQueue=new LinkedList<string>();
-                  //buffer = new LinkedList<string>(_logsQueue);
-                        //copia para o stack para não estar dependente do IO e minimizar o tempo de lock
-                  
+                    if (_logsQueue.Count != 0)
+                    {
+                        buffer = _logsQueue;
+                        _logsQueue = new LinkedList<string>();
+                    }
                 }
-                Monitor.Pulse(this);
-                foreach (var elem in buffer) // este buffer por ir a null? acho que não
+                foreach (var elem in buffer)
                 {
                     _writeBuffer.Write(elem);
                 }
-                if (_stop && _logsQueue.Count == 0) Monitor.Wait(this);
+                lock (this)
+                {
+                    if (_stop == Status.Stopping && _logsQueue.Count == 0)
+                    {
+                        _stop = Status.Stopped;
+                        Monitor.PulseAll(this);
+                        return;
+                    }
+                }
             }
         }
     }

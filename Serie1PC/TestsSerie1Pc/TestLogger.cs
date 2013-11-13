@@ -18,31 +18,30 @@ namespace TestsSerie1Pc
         public void TestWriteTo()
         {
             const int MAX_PROCESSORS = 8;
+           
             using (TextWriter write = File.CreateText("./logger.txt"))
             {
-                
                 var synchronizer = new Logger(write);
-                
+                 synchronizer.Start();
                     var producer = new Thread(() =>
                     {
                         for (int i = 0; i < MAX_PROCESSORS; i++)
                         {
-                            synchronizer.LogMessage("MY ID: " + Thread.CurrentThread.Name + "Cycle number :"+i+"\n");
+                            synchronizer.LogMessage("Cycle number :"+i+"\n");
                         }
                     });
-                    producer.Start();
-
+                producer.Start();
                 producer.Join();
-                synchronizer.Start();
                 synchronizer.Stop();
-
+               
             }
-
-            using (TextWriter write = File.CreateText("./logger.txt"))
+            var lines = File.ReadAllLines("./logger.txt");
+            int c = 0;
+            foreach (var line in lines)
             {
-
+                Assert.AreEqual("Cycle number :"+c+"\n",line);
+                c++;
             }
-
         }
  
        
