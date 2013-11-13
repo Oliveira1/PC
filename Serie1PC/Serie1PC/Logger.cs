@@ -78,20 +78,19 @@ namespace Serie1PC
 
         private void Write()
         {
-           var buffer=new LinkedList<string>();
+            LinkedList<string> buffer;
             while (true)
             {
                 lock (this)
                 {
-                    if (_logsQueue.Count != 0)
-                    {
                         buffer = _logsQueue;
                         _logsQueue = new LinkedList<string>();
-                    }
+                
                 }
                 foreach (var elem in buffer)
                 {
                     _writeBuffer.Write(elem);
+               
                 }
                 lock (this)
                 {

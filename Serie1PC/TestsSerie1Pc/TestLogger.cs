@@ -18,8 +18,8 @@ namespace TestsSerie1Pc
         public void TestWriteTo()
         {
             const int MAX_PROCESSORS = 8;
-           
-            using (TextWriter write = File.CreateText("./logger.txt"))
+            var sb=new StringBuilder();
+            using (var write =new StringWriter(sb))
             {
                 var synchronizer = new Logger(write);
                  synchronizer.Start();
@@ -35,12 +35,10 @@ namespace TestsSerie1Pc
                 synchronizer.Stop();
                
             }
-            var lines = File.ReadAllLines("./logger.txt");
-            int c = 0;
-            foreach (var line in lines)
-            {
-                Assert.AreEqual("Cycle number :"+c+"\n",line);
-                c++;
+            var lines = sb.ToString().Split('\n');
+           for(var i=0;i<lines.Length-1;i++){ //-1  por causa do EOF*
+                Assert.AreEqual("Cycle number :"+i,lines[i]);
+                Console.WriteLine(lines[i]);
             }
         }
  
