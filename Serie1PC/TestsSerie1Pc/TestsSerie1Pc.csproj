@@ -54,6 +54,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestLogger.cs" />
     <Compile Include="TestMessageQueue.cs" />
+    <Compile Include="TestRendezvousChannel.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Serie1PC\Serie1PC.csproj">
