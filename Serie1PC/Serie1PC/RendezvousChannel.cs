@@ -21,10 +21,12 @@ namespace Serie1PC
             public Token(S service)
             {
                 this.service = service;
+                this.response = default(R);
             }
 
             public Token(R Response)
             {
+                this.service = default(S);
                 this.response = response;
             }
 
@@ -37,8 +39,14 @@ namespace Serie1PC
 
         private class Ticket
         {
-            public Token token;
-            internal Status processing=Status.Open;
+            public  Token token;
+            internal Status processing;
+
+            public Ticket()
+            {
+                token = new Token();
+                processing = Status.Open;
+            }
         }
         private LinkedList<Ticket> _services;
         private LinkedList<Ticket> _processingRequests;
@@ -53,14 +61,13 @@ namespace Serie1PC
             lock (this)
             {
                 Ticket myTicket;
-                Token myToken;
                 if(CheckForAcceptingTokens(out myTicket,service))
                 {
                    Monitor.PulseAll(this);
                 }
                 else
                 {
-                    myTicket.token.service = service;
+                    myTicket.token=new Token(service);
                      _services.AddLast(myTicket);
                 }
                     
