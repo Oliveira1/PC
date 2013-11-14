@@ -44,13 +44,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Condition.cs" />
     <Compile Include="Message.cs" />
     <Compile Include="PontoDeEntrada.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="MessageQueue.cs" />
     <Compile Include="Completion.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ReentrantLock.cs" />
     <Compile Include="RendezvousChannel.cs" />
+    <Compile Include="SemaforoFifo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
