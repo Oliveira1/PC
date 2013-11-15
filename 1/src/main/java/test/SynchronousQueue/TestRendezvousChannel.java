@@ -23,7 +23,7 @@ public class TestRendezvousChannel {
 				waitingToStart.countDown();
 				Token myToken;
 				try {
-					myToken = (Token)synchronizer.Accept(0);
+					myToken = (Token)synchronizer.Accept(Integer.MAX_VALUE);
 					synchronizer.Reply(myToken,(Integer)myToken.service*2);
 				} catch (InterruptedException e) {/*impossible*/}
 
@@ -33,7 +33,7 @@ public class TestRendezvousChannel {
 		server.start();
 		Integer response;
 		waitingToStart.await();
-		if ((response=(Integer)synchronizer.Request(2, 0))!=null)
+		if ((response=(Integer)synchronizer.Request(2, Integer.MAX_VALUE))!=null)
 		{
 
 			assertEquals(new Integer(4),response);
@@ -52,7 +52,7 @@ public class TestRendezvousChannel {
 				
 				waitingToStart.countDown();
 				try {
-					Integer response=(Integer)synchronizer.Request(2, 0);
+					Integer response=(Integer)synchronizer.Request(2, Integer.MAX_VALUE);
 					assertEquals(result, response);
 					waitingToEnd.countDown();
 				} catch (InterruptedException e) {
@@ -66,7 +66,7 @@ public class TestRendezvousChannel {
 		client.start();
 		waitingToStart.await();
 		int service;
-		Token myToken = (Token)synchronizer.Accept(0);
+		Token myToken = (Token)synchronizer.Accept(Integer.MAX_VALUE);
 		synchronizer.Reply(myToken,(Integer) myToken.service * 2);
 		waitingToEnd.await();
 		assertEquals(new Integer(4), result);

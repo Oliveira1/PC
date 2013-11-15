@@ -5,6 +5,7 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+
 public class RendezvousChannel<S,R> {	
 	public class Token
 	{
@@ -73,14 +74,35 @@ public class RendezvousChannel<S,R> {
 				myTicket._condition = _lock.newCondition();
 				_services.addLast(myTicket);
 			}
-
+			long lastTime=(timeout !=Integer.MAX_VALUE) ? System.currentTimeMillis(): 0;
 			while (true)
 			{
-				myTicket._condition.await();
-				if (myTicket.processing == Status.Concluded)
+				try
 				{
-					R response = myTicket.token.response;
-					return response;
+					myTicket._condition.await();
+					if (myTicket.processing == Status.Concluded)
+					{
+						R response = myTicket.token.response;
+						return response;
+					}
+					timeout=SyncUtils.AdjustTimeout(lastTime,timeout);
+					lastTime =System.currentTimeMillis() ;
+					if(timeout==0 && myTicket.processing==Status.Open){
+						_services.remove(myTicket);
+						return null;
+					}
+				}
+				catch(InterruptedException e){
+					if (myTicket.processing == Status.Open)
+					{
+						_services.remove(myTicket);   
+						Thread.currentThread().interrupt();
+						return null;
+					}
+					if (myTicket.processing == Status.Concluded)
+						return myTicket.token.response;;
+
+						timeout =Integer.MAX_VALUE;	
 				}
 			}
 		}
@@ -109,20 +131,29 @@ public class RendezvousChannel<S,R> {
 	{
 		try{
 			_lock.lock();
-			
+
 			if (!_services.isEmpty())
 				return RemoveFirstRequestedToken();
-			
+
 			Ticket myTicket = new Ticket();
 			myTicket._condition=_lock.newCondition();
 			myTicket.processing = Status.Accepting;
 			_services.addLast(myTicket);
+			long lastTime=(timeout !=Integer.MAX_VALUE) ? System.currentTimeMillis(): 0;
 			while (true)
 			{
 				myTicket._condition.await();
 				if (myTicket.processing == Status.InProcess)
 					return myTicket.token;
-
+				
+				timeout=SyncUtils.AdjustTimeout(lastTime,timeout);
+				lastTime =System.currentTimeMillis() ;
+				
+				if(timeout==0)
+                {
+                    _services.remove(myTicket);
+                    return null;
+                }
 			}
 		}
 		finally{
