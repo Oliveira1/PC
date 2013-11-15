@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CreatingConditionLikeJava
+namespace Serie1PC
 {
     public sealed class Condition
     {
@@ -14,6 +14,7 @@ namespace CreatingConditionLikeJava
 
         public Condition(ReentrantLock master)
         {
+            _cond=new Object();
             _master = master;
         }
 
@@ -23,7 +24,8 @@ namespace CreatingConditionLikeJava
             ThreadInterruptedException tie = enterMon(_cond);
             Monitor.Enter(_cond); //Não pode falhar porque não pode estar a lancar excepcoes de cancelamento
             Monitor.Pulse(_cond);
-            Monitor.Exit(_cond);
+            Monitor.Exit(_cond); 
+            if (tie != null) Thread.CurrentThread.Interrupt();
         }
 
         public void Wait()

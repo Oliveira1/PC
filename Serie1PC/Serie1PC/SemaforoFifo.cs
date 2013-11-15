@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CreatingConditionLikeJava
+namespace Serie1PC
 {
     class SemaforoFifo
     {
@@ -40,7 +40,7 @@ namespace CreatingConditionLikeJava
                 _units = 0;
                 Request myRequest=new Request();
                 myRequest._missingUnits = units;
-                myRequest._condition=new Condition();
+                myRequest._condition=new Condition(_lock);
                 _requeue.AddLast(myRequest);
                 while (true)
                 {

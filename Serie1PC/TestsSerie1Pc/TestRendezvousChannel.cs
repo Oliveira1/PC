@@ -15,7 +15,7 @@ namespace TestsSerie1Pc
     {
 
         [TestMethod]
-        public void WithOneClientAndOneServerThread()
+        public void WithOneClientAndOneServerThreadByRunningServerFirst()
         {   
             var synchronizer = new RendezvousChannel<int,int>();
             var waitingToStart = new ManualResetEvent(false);
@@ -34,6 +34,33 @@ namespace TestsSerie1Pc
             {
                 Assert.AreEqual(4,response);
             }
+        }
+
+        [TestMethod]
+        public void WithOneClientAndOneServerThreadByRunningClientFirst()
+        {
+            var synchronizer = new RendezvousChannel<int, int>();
+            var waitingToStart = new ManualResetEvent(false);
+            var waitingToEnd=new ManualResetEvent(false);
+            var result = 0;
+            var client = new Thread(() =>
+            {
+               
+                 int response; 
+                waitingToStart.Set();
+                synchronizer.Request(2, 0, out response);
+                result = response;
+                waitingToEnd.Set();
+            });
+
+            client.Start();
+            waitingToStart.WaitOne();
+                int service;
+                var myToken = (RendezvousChannel<int,int>.Token)synchronizer.Accept(0, out service);
+                synchronizer.Reply(myToken, myToken.service * 2);
+            waitingToEnd.WaitOne();
+                Assert.AreEqual(4, result);
+            
         }
     }
 }

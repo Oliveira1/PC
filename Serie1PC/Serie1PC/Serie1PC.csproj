@@ -54,6 +54,7 @@
     <Compile Include="ReentrantLock.cs" />
     <Compile Include="RendezvousChannel.cs" />
     <Compile Include="SemaforoFifo.cs" />
+    <Compile Include="SyncUtils.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

@@ -1,22 +1,19 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Threading;
+
 
 
 namespace Serie1PC
 {
     public class RendezvousChannel<S,R>
     {
+        
         public class Token
         {
             public S service;
-
             public R response;
-
-            public Token(S service, R Response)
-            {
-                this.service = service;
-                this.response = response;
-            }
 
             public Token(S service)
             {
@@ -24,11 +21,7 @@ namespace Serie1PC
                 this.response = default(R);
             }
 
-            public Token(R Response)
-            {
-                this.service = default(S);
-                this.response = response;
-            }
+      
 
             public Token()
             {
@@ -36,11 +29,11 @@ namespace Serie1PC
                 response = default(R);
             }
         }
-
         private class Ticket
         {
-            public  Token token;
+            public Token token;
             internal Status processing;
+            public object _condition;
 
             public Ticket()
             {
@@ -48,41 +41,52 @@ namespace Serie1PC
                 processing = Status.Open;
             }
         }
-        private LinkedList<Ticket> _services;
-        private LinkedList<Ticket> _processingRequests;
-        public enum Status{Open,Accepting, InProcess, Concluded }
+
+        private readonly Object _lock = new Object();
+        private readonly LinkedList<Ticket> _services;
+        private readonly LinkedList<Ticket> _processingRequests;
+
+            public enum Status
+            {
+                Open,
+                Accepting,
+                InProcess,
+                Concluded
+            };
         public RendezvousChannel()
         {
             _services=new LinkedList<Ticket>();
             _processingRequests = new LinkedList<Ticket>();
         }
+
         public bool Request(S service,int timeout, out R response)
         {
-            lock (this)
-            {
-                Ticket myTicket;
-                if(CheckForAcceptingTokens(out myTicket,service))
-                {
-                   Monitor.PulseAll(this);
-                }
-                else
-                {
-                    myTicket.token=new Token(service);
-                     _services.AddLast(myTicket);
-                }
-                    
-                while (true)
-                {
-                    Monitor.Wait(this);
-                    if (myTicket.processing == Status.Concluded)
+           lock(_lock){
+                    Ticket myTicket;
+                    if (CheckForAcceptingTokens(out myTicket, service))
                     {
-                        response = myTicket.token.response;
-                        return true;
+                     SyncUtils.Notify(_lock,myTicket._condition);
                     }
-                }
+                    else
+                    {
+                          myTicket.token = new Token(service);
+                        myTicket._condition = new Object();
+                        _services.AddLast(myTicket);
+                    }
+                  
+                    while (true)
+                    {
+                        SyncUtils.Wait(_lock,myTicket._condition);
+                        if (myTicket.processing == Status.Concluded)
+                        {
+                            response = myTicket.token.response;
+                            return true;
+                        }
+                    }
             }
+            
         }
-        private bool CheckForAcceptingTokens(out Ticket myTicket, S service)
+        private bool CheckForAcceptingTokens( out Ticket myTicket, S service)
         {
             foreach (var ticket in _services)
             {
@@ -101,40 +105,43 @@ namespace Serie1PC
         }
 
         public  object Accept(int timeout, out S service)
-    {
-        lock (this)
-        {
-            var myTicket = new Ticket();
-            if (_services.Count !=0)
             {
-                RemoveFirstRequestedToken(ref myTicket);
-                Monitor.PulseAll(this);   // modificar, para já é sem notificação específica de Threads
-                service = myTicket.token.service;
-                return myTicket.token;
-            }
-            myTicket.processing = Status.Accepting;
-            _services.AddLast(myTicket);
-            while (true)
+            lock (_lock)
             {
-                Monitor.Wait(this);
-                if (myTicket.processing==Status.InProcess)
-                {
-                    service = myTicket.token.service;
-                    return myTicket.token;
-                }
-            }
-        }
+                    var myTicket = new Ticket();
+                    Token token = new Token();
+                    if (_services.Count != 0)
+                    {
+                        RemoveFirstRequestedToken(ref myTicket);
+                        service = myTicket.token.service;
+                        token = myTicket.token;
+                        return token;
+                    }
 
+                    myTicket._condition = new Object();
+                    myTicket.processing = Status.Accepting;
+                    _services.AddLast(myTicket);
+                    
+
+                    while (true)
+                    {
+                        SyncUtils.Wait(_lock, myTicket._condition);
+                        if (myTicket.processing == Status.InProcess)
+                        {
+                            service = myTicket.token.service;
+                            return myTicket.token;
+                        }
+                    }
+          }
     }
     public void Reply(object rendezVousToken, R Response)
         {
-            Token myToken;
-            lock (this)
-            {
-                myToken = (Token) rendezVousToken;
-                FindTokenInProcessingRequests(ref myToken,Response);
-                Monitor.PulseAll(this);
-            }
+        lock (_lock)
+        {
+                var myToken = (Token) rendezVousToken;
+                FindTokenInProcessingRequests(ref myToken, Response);       
+        }
+        
         }
         private void RemoveFirstRequestedToken(ref Ticket myTicket)
         {
@@ -162,6 +169,7 @@ namespace Serie1PC
                     myToken.response = response;
                     ticket.processing = Status.Concluded;
                     _processingRequests.Remove(ticket);
+                    SyncUtils.Notify(_lock,ticket._condition);           
                     return;
                 }
             }
