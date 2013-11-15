@@ -23,14 +23,14 @@ namespace TestsSerie1Pc
             {
                 int service;
                 waitingToStart.Set();
-                var myToken=(RendezvousChannel<int,int>.Token)synchronizer.Accept(0,out service);
+                var myToken = (RendezvousChannel<int, int>.Token)synchronizer.Accept(Timeout.Infinite, out service);
                 synchronizer.Reply(myToken,myToken.service*2);
             });
          
             server.Start();
                 int response;
             waitingToStart.WaitOne();
-            if (synchronizer.Request(2, 0, out response))
+            if (synchronizer.Request(2, Timeout.Infinite, out response))
             {
                 Assert.AreEqual(4,response);
             }
@@ -48,7 +48,7 @@ namespace TestsSerie1Pc
                
                  int response; 
                 waitingToStart.Set();
-                synchronizer.Request(2, 0, out response);
+                synchronizer.Request(2, Timeout.Infinite, out response);
                 result = response;
                 waitingToEnd.Set();
             });
@@ -56,7 +56,7 @@ namespace TestsSerie1Pc
             client.Start();
             waitingToStart.WaitOne();
                 int service;
-                var myToken = (RendezvousChannel<int,int>.Token)synchronizer.Accept(0, out service);
+                var myToken = (RendezvousChannel<int, int>.Token)synchronizer.Accept(Timeout.Infinite, out service);
                 synchronizer.Reply(myToken, myToken.service * 2);
             waitingToEnd.WaitOne();
                 Assert.AreEqual(4, result);
