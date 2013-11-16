@@ -58,7 +58,7 @@ namespace Serie1PC
 
         public Boolean LogMessage(String msg)
         {
-            if (_stop==Status.Stopped) throw new Exception(); //undefined
+            if (_stop==Status.Stopping) throw new Exception(); //undefined
             lock(this)
             {
                 if (_logsQueue.Count < CAPACITY)

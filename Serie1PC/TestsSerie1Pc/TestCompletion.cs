@@ -16,7 +16,7 @@ namespace TestsSerie1Pc
             var producer = new Thread(() =>
             {
                 myEvent.Set();
-                synchronizer.WaitForCompletion();
+                synchronizer.WaitForCompletion(Timeout.Infinite);
 
             });
             producer.Start();
@@ -38,7 +38,7 @@ namespace TestsSerie1Pc
                 {
                     waitingForAllThreadsToStart.Signal();
                     waitingForAllThreadsToStart.Wait();
-                    synchronizer.WaitForCompletion();
+                    synchronizer.WaitForCompletion(Timeout.Infinite);
                     waitingForAllThreadsToEnd.Signal();
 
                 });
@@ -57,7 +57,7 @@ namespace TestsSerie1Pc
                 {
                     waitingForAllThreadsToStart.Signal();
                     waitingForAllThreadsToStart.Wait();
-                    synchronizer.WaitForCompletion();
+                    synchronizer.WaitForCompletion(Timeout.Infinite);
                     waitingForAllThreadsToEnd.Signal();
 
                 });

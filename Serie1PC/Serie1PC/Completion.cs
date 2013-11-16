@@ -44,27 +44,38 @@ namespace Serie1PC
             }
         }
 
-        public void WaitForCompletion()
+        public bool WaitForCompletion(int timeout)
         {
             lock (this)
             {
-                if (_complete) return;
+                if (_complete) return true;
                 if (_permits > 0)
                 {
                     _permits--;
-                    return;
+                    return true ;
                 }
-
+                int lastTime = (timeout != Timeout.Infinite) ? Environment.TickCount : 0;
                 while (true)
                 {
-                    Monitor.Wait(this);
-                    if (_complete) return;
-                    if (_permits > 0)
+                    try
                     {
-                        _permits--;
-                        return;
+                        Monitor.Wait(this);
+                        if (_complete) return true;
+                        if (_permits > 0)
+                        {
+                            _permits--;
+                            return true;
+                        }
+                        if (SyncUtils.AdjustTimeout(ref lastTime, ref timeout) == 0)
+                        {
+                            return false;
+                        }
                     }
-
+                    catch (Exception e)
+                    {
+                        Thread.CurrentThread.Interrupt();
+                        throw new ThreadInterruptedException();
+                    }
                 }
 
             }
