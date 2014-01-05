@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MyFilesSearch;
 
@@ -9,6 +10,13 @@ namespace Serie3Tests
     [TestClass]
     public class Exercicio3Tests
     {
+        public Exercicio3Tests(CancellationTokenSource cts)
+        {
+            _cts = cts;
+        }
+
+        private CancellationTokenSource _cts;
+
         [TestMethod]
         public void Test_C_USERS_DOWNLOADS_ALL()
         {
@@ -18,7 +26,7 @@ namespace Serie3Tests
             String s = "Searching on C:\\Users\\" + userName + "\\Downloads\\";
             Console.WriteLine(s);
             IEnumerable<Exercicio3.SearchResult> x = Exercicio3.Find_By_Sequence("C:\\Users\\" + userName + "\\Downloads\\", "*.zip",
-                "a");
+                "a", _cts);
 
             foreach (var i in x)
             {

@@ -1,4 +1,6 @@
-﻿namespace MyFilesSearch
+﻿using System.Threading;
+
+namespace MyFilesSearch
 {
     partial class FileSearch
     {
@@ -63,6 +65,7 @@
             this.button_cancel.TabIndex = 1;
             this.button_cancel.Text = "Cancel";
             this.button_cancel.UseVisualStyleBackColor = true;
+            this.button_cancel.Click += new System.EventHandler(this.button_cancel_Click);
             // 
             // lb_found
             // 
@@ -123,7 +126,6 @@
             this.text_char_sequence.Name = "text_char_sequence";
             this.text_char_sequence.Size = new System.Drawing.Size(80, 20);
             this.text_char_sequence.TabIndex = 10;
-            this.text_char_sequence.TextChanged += new System.EventHandler(this.textBox3_TextChanged);
             // 
             // lb_char_sequence
             // 
@@ -191,7 +193,6 @@
             this.Controls.Add(this.button_search);
             this.Name = "FileSearch";
             this.Text = "FileSearch";
-            this.Load += new System.EventHandler(this.FileSearch_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -214,5 +215,6 @@
         private System.Windows.Forms.Label lb_path;
         private System.Windows.Forms.Button button_path;
         private System.Windows.Forms.Label lb_search;
+        private CancellationTokenSource cts = null;
     }
 }

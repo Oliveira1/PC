@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing.Text;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MyFilesSearch
@@ -23,73 +24,32 @@ namespace MyFilesSearch
             }
         }
 
-        /* public static IEnumerable<SearchResult> Find_By_Sequence(String root_Directory, String extension,
-            String char_sequence)
+
+        public static IEnumerable<SearchResult> Find_By_Sequence(DirectoryInfo root, string extension, string seq,
+            CancellationTokenSource cts)
         {
-            var taskCount = Environment.ProcessorCount;
-            List<Task<SearchResult>> tasks = new List<Task<SearchResult>>();
-            System.IO.DirectoryInfo rd = new DirectoryInfo(root_Directory);
-            String[] files = WalkDirectoryTree(rd, extension, seq).ToArray();
+            FileInfo[] files = null;
+            DirectoryInfo[] subDirs = null;
 
-            var blockSize = files.Length/taskCount;
-            for (int i = 0; i < taskCount; i++)
-            {
-                int taskID = i;
-                tasks.Add(Task<SearchResult>.Factory.StartNew(() =>
-                {
-                    SearchResult result = new SearchResult();
-                    int count = 0;
-                    int startIndex = taskID*blockSize;
-                    int endIndex = (files.Length%2 != 0 && taskID == (taskCount - 1))
-                        ? (startIndex + blockSize + 1)
-                        : (startIndex + blockSize);
-                    result.total = endIndex - startIndex;
-
-                    for (int index = startIndex; index < endIndex; index++)
-                    {
-                        String fileName = Path.GetFileName(files[index]).ToLower();
-                        if (char_sequence.Equals("*") || fileName.Contains(char_sequence))
-                        {
-                            count++;
-                            result.paths.Add(files[index]);
-                        }
-                    }
-                    result.matching_sequence = count;
-                    return result;
-                }));
-            }
-            while (tasks.Count > 0)
-            {
-                Task<Task<SearchResult>> tr = Task.WhenAny(tasks);
-                tasks.Remove(tr.Result);
-                SearchResult r = tr.Result.Result;
-                yield return r;
-            }
-        }*/
-
-        public static IEnumerable<SearchResult> Find_By_Sequence(DirectoryInfo root, String extension, String seq)
-        {
-            System.IO.FileInfo[] files = null;
-            System.IO.DirectoryInfo[] subDirs = null;
-            
-                subDirs= root.GetDirectories();
+            subDirs = root.GetDirectories();
 
             List<String> filePaths = new List<string>();
             var taskCount = Environment.ProcessorCount;
             List<Task<SearchResult>> tasks = new List<Task<SearchResult>>();
-            
-            // First, process all the files directly under this folder 
 
-            foreach (System.IO.DirectoryInfo dirInfo in subDirs)
+            // First, process all the files directly under this folder 
+            //Procura todos os Directorios neste folder e verifica se há algum com permissoes especiais, se houver não chama este método recursivamente
+            foreach (DirectoryInfo dirInfo in subDirs)
             {
+                if (cts.IsCancellationRequested) yield return null;
+
+
                 if (dirInfo != null &&
                     !(dirInfo.Attributes.HasFlag(FileAttributes.Hidden) ||
                       dirInfo.Attributes.HasFlag(FileAttributes.System)))
                 {
-                    foreach (var sr in Find_By_Sequence(dirInfo, extension, seq))
-                    {
+                    foreach (var sr in Find_By_Sequence(dirInfo, extension, seq, cts))
                         yield return sr;
-                    }
                 }
             }
 
@@ -100,17 +60,15 @@ namespace MyFilesSearch
             }
             catch (UnauthorizedAccessException e)
             {
-/*ABAFATOR*/
             }
-
             catch (System.IO.DirectoryNotFoundException e)
             {
-                /*ABAFATOR*/
             }
 
+            //Se existirem ficheiros então cria tasks consoante o numero de processadores para procurarem os ficheiros que facam match.
             if (files != null)
             {
-                var blockSize = files.Length / taskCount;
+                var blockSize = files.Length/taskCount;
                 for (int i = 0; i < taskCount; i++)
                 {
                     int taskID = i;
@@ -135,10 +93,10 @@ namespace MyFilesSearch
                         }
                         result.matching_sequence = count;
                         return result;
-                    }));
+                    }, cts.Token));
                 }
 
-                while (tasks.Count > 0)
+                while (tasks.Count > 0 && !cts.IsCancellationRequested)
                 {
                     Task<Task<SearchResult>> tr = Task.WhenAny(tasks);
                     tasks.Remove(tr.Result);
