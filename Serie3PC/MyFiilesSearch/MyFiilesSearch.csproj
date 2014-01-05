@@ -3,11 +3,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{9F9E64F3-989E-474B-8E2B-39B253C3950C}</ProjectGuid>
+    <ProjectGuid>3e5d7efe-e7ed-41bf-8650-5f0bb50c6831</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Serie3Tests</RootNamespace>
-    <AssemblyName>Serie3Tests</AssemblyName>
+    <RootNamespace>MyFiilesSearch</RootNamespace>
+    <AssemblyName>MyFiilesSearch</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -52,12 +52,6 @@
   <ItemGroup>
     <Compile Include="UnitTest1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\MyFilesSearch\MyFilesSearch.csproj">
-      <Project>{c9cb8bbd-7da8-4762-bf42-ba65beec63ce}</Project>
-      <Name>MyFilesSearch</Name>
-    </ProjectReference>
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
