@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -27,40 +28,49 @@ namespace MyServer
 
     }
 
-        public static SearchResult Find_By_Sequence(String root_Directory, String extension, String char_sequence)
+        public static  IEnumerable<SearchResult> Find_By_Sequence(String root_Directory, String extension, String char_sequence)
         {
             var taskCount = Environment.ProcessorCount;
-            var tasks = new Task<SearchResult>[taskCount];
+            List<Task<SearchResult>> tasks = new List<Task<SearchResult>>();
             String[] files = Directory.GetFiles(root_Directory, extension, SearchOption.AllDirectories);
 
             var blockSize = files.Length/taskCount;
             for (int i = 0; i < taskCount; i++)
             {
                 int taskID = i;
-                tasks[taskID] = Task<SearchResult>.Factory.StartNew(() =>
+                tasks.Add(Task<SearchResult>.Factory.StartNew(() =>
                 {
-                    SearchResult result=new SearchResult();
+                    SearchResult result = new SearchResult();
                     int count = 0;
                     int startIndex = taskID*blockSize;
-                    int endIndex = (files.Length%2 !=0 && taskID == (taskCount - 1))
-                        ? (startIndex + blockSize+1)
+                    int endIndex = (files.Length%2 != 0 && taskID == (taskCount - 1))
+                        ? (startIndex + blockSize + 1)
                         : (startIndex + blockSize);
-                        result.total = endIndex - startIndex;
+                    result.total = endIndex - startIndex;
 
-                    for (int index = startIndex; index <endIndex; index++)
+                    for (int index = startIndex; index < endIndex; index++)
                     {
                         String fileName = Path.GetFileName(files[index]).ToLower();
                         if (char_sequence.Equals("*") || fileName.Contains(char_sequence))
                         {
                             count++;
-                           result.paths.Add(files[index]);
+                            result.paths.Add(files[index]);
                         }
                     }
                     result.matching_sequence = count;
                     return result;
-                });
+                }));
             }
-          var taskResult= Task<SearchResult>.Factory.ContinueWhenAll(tasks, (antecedents) =>
+            while (tasks.Count > 0)
+            {
+                Task<Task<SearchResult>> tr =  Task.WhenAny(tasks);
+                tasks.Remove(tr.Result);
+                SearchResult r = tr.Result.Result;
+                yield return r;
+            }
+
+
+            /*var taskResult= Task<SearchResult>.Factory.ContinueWhenAll(tasks, (antecedents) =>
           {
               var c = new SearchResult();
                 for (int i = 0; i < taskCount; i++)
@@ -76,6 +86,7 @@ namespace MyServer
                 return c;
             });
             return taskResult.Result;
+       */
         }
     }
 }

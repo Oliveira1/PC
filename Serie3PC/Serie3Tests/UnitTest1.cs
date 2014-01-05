@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using MyServer;
@@ -16,12 +17,16 @@ namespace Serie3Tests
             if (userName == null) Assert.Fail("null UserName");
             String s = "Searching on C:\\Users\\" + userName + "\\Downloads\\";
             Console.WriteLine(s);
-            Exercicio3.SearchResult i = Exercicio3.Find_By_Sequence("C:\\Users\\" + userName + "\\Downloads\\", "*.zip",
+            IEnumerable<Exercicio3.SearchResult> x = Exercicio3.Find_By_Sequence("C:\\Users\\" + userName + "\\Downloads\\", "*.zip",
                 "a");
 
+            foreach (var i in x)
+            {
             Console.WriteLine("total:" + i.total + "\n Found matches:" + i.matching_sequence);
             foreach (var path in i.paths)
                 Console.WriteLine(path);
+                
+            }
         }
     }
 }
