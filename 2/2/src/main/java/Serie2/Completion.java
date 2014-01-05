@@ -3,16 +3,15 @@ package Serie2;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Completion {
-private final 	AtomicInteger permits=new AtomicInteger();
+	private final 	AtomicInteger permits=new AtomicInteger();
 
 	public void waitForCompletion() throws InterruptedException{
 		do{
 			int curPermits=permits.get();
 			if(curPermits==-1) return;
-			if(curPermits==0)continue;
-
-			if(permits.compareAndSet(curPermits, curPermits-1))
-				return;
+			if(curPermits>0)
+				if(permits.compareAndSet(curPermits, curPermits-1))
+					return;
 
 			if(permits.get()>0) continue;
 			synchronized(permits){
