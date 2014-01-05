@@ -18,6 +18,13 @@ namespace MyServer
         public int matching_sequence;
         public List<String> paths;
 
+   public   SearchResult()
+        {
+            total = 0;
+            matching_sequence = 0;
+            paths=new List<string>();
+        }
+
     }
 
         public static SearchResult Find_By_Sequence(String root_Directory, String extension, String char_sequence)
@@ -34,47 +41,39 @@ namespace MyServer
                 {
                     SearchResult result=new SearchResult();
                     int count = 0;
-                    int total = 0;
                     int startIndex = taskID*blockSize;
-                    int endIndex = (files.Length%2 == 1 && taskID == taskCount - 1)
-                        ? startIndex + blockSize
-                        : startIndex + blockSize + 1;
-                        count = endIndex - startIndex;
-                        result.total = count;
-                    if (char_sequence.Equals("*"))
-                    {
-                        result.matching_sequence = count;
-                    }
-                
+                    int endIndex = (files.Length%2 !=0 && taskID == (taskCount - 1))
+                        ? (startIndex + blockSize+1)
+                        : (startIndex + blockSize);
+                        result.total = endIndex - startIndex;
+
                     for (int index = startIndex; index <endIndex; index++)
                     {
-                        if (char_sequence.Equals("*"))
-                        {
-                            result.paths.Add(files[i].ToString());
-                        }
-                        else  if (files[i].Contains(char_sequence))
+                        String fileName = Path.GetFileName(files[index]).ToLower();
+                        if (char_sequence.Equals("*") || fileName.Contains(char_sequence))
                         {
                             count++;
-                            result.paths.Add(files[i].ToString());
+                           result.paths.Add(files[index]);
                         }
                     }
+                    result.matching_sequence = count;
                     return result;
                 });
             }
           var taskResult= Task<SearchResult>.Factory.ContinueWhenAll(tasks, (antecedents) =>
-            {
-                SearchResult c=new SearchResult();
-                c.total = 0;
+          {
+              var c = new SearchResult();
                 for (int i = 0; i < taskCount; i++)
                 {
                     Task<SearchResult> t= antecedents[i];
-                   c.total= t.Result.total;
-                    c.matching_sequence = t.Result.matching_sequence;
+                   
+                   c.total+=t.Result.total;
+                    c.matching_sequence+= t.Result.matching_sequence;
                    c.paths.AddRange(t.Result.paths);
                 }
-         
-                
-                return new SearchResult();
+
+
+                return c;
             });
             return taskResult.Result;
         }
