@@ -15,8 +15,9 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 
-namespace MyServer
+namespace MyTplServer
 {
     /// <summary>
     /// Handles client requests.
@@ -45,13 +46,15 @@ namespace MyServer
         /// <summary>
         /// Handles REGISTER messages.
         /// </summary>
-        private static void ProcessRegisterMessage(Stream con,StreamReader input, StreamWriter output, Logger log)
+        private static async void ProcessRegisterMessage(Stream con,StreamReader input, StreamWriter output, Logger log)
         {
             // Read message payload, terminated by an empty line. 
             // Each payload line has the following format
             // <filename>:<ipAddress>:<portNumber>
-            string line;
-                 while ((line = input.ReadLine()) != null && line != string.Empty)
+            string line = await input.ReadLineAsync();
+            Task.Factory.StartNew(async () =>
+            {
+                while (!string.IsNullOrEmpty(line))
                 {
                     if (line == String.Empty) return;
                     string[] triple = line.Split(':');
@@ -67,9 +70,11 @@ namespace MyServer
                         log.LogMessage("Handler - Invalid REGISTER message.");
                         return;
                     }
-                   //  if(triple[0]!=string.Empty && triple[1]!=string.Empty && triple[2]!=string.Empty)
+                    //  if(triple[0]!=string.Empty && triple[1]!=string.Empty && triple[2]!=string.Empty)
                     Store.Instance.Register(triple[0], new IPEndPoint(ipAddress, port));
+                    line = await input.ReadLineAsync();
                 }
+            });
             // This request message does not have a corresponding response message, hence, 
             // nothing is sent to the client.
         }
@@ -77,29 +82,34 @@ namespace MyServer
         /// <summary>
         /// Handles UNREGISTER messages.
         /// </summary>
-        private static void ProcessUnregisterMessage(Stream con,StreamReader input, StreamWriter output, Logger log)
+        private static async void ProcessUnregisterMessage(Stream con,StreamReader input, StreamWriter output, Logger log)
         {
             // Read message payload, terminated by an empty line. 
             // Each payload line has the following format
             // <filename>:<ipAddress>:<portNumber>
-            string line;
-            while ((line = input.ReadLine()) != null && line != string.Empty)
+            string line = await input.ReadLineAsync();
+            Task.Factory.StartNew(async () =>
             {
-                string[] triple = line.Split(':');
-                if (triple.Length != 3)
+                while (!string.IsNullOrEmpty(line))
                 {
-                    log.LogMessage("Handler - Invalid UNREGISTER message.");
-                    return;
+
+                    string[] triple = line.Split(':');
+                    if (triple.Length != 3)
+                    {
+                        log.LogMessage("Handler - Invalid UNREGISTER message.");
+                        return;
+                    }
+                    IPAddress ipAddress = IPAddress.Parse(triple[1]);
+                    ushort port;
+                    if (!ushort.TryParse(triple[2], out port))
+                    {
+                        log.LogMessage("Handler - Invalid UNREGISTER message.");
+                        return;
+                    }
+                    Store.Instance.Unregister(triple[0], new IPEndPoint(ipAddress, port));
+                    line = await input.ReadToEndAsync();
                 }
-                IPAddress ipAddress = IPAddress.Parse(triple[1]);
-                ushort port;
-                if (!ushort.TryParse(triple[2], out port))
-                {
-                    log.LogMessage("Handler - Invalid UNREGISTER message.");
-                    return;
-                }
-                Store.Instance.Unregister(triple[0], new IPEndPoint(ipAddress, port));
-            }
+            });
 
             // This request message does not have a corresponding response message, hence, 
             // nothing is sent to the client.
@@ -108,7 +118,7 @@ namespace MyServer
         /// <summary>
         /// Handles LIST_FILES messages.
         /// </summary>
-        private static void ProcessListFilesMessage(Stream con,StreamReader input,StreamWriter output, Logger log)
+        private static async void ProcessListFilesMessage(Stream con,StreamReader input,StreamWriter output, Logger log)
         {
             // Request message does not have a payload.
             // Read end message mark (empty line)
@@ -119,36 +129,42 @@ namespace MyServer
             // Send response message. 
             // The message is composed of multiple lines and is terminated by an empty one.
             // Each line contains a name of a tracked file.
-            foreach (string file in trackedFiles)
-                output.WriteLine(file);
+           await  Task.Factory.StartNew(()=>
+            {
+                foreach (string file in trackedFiles)
+                    output.WriteLine(file);
 
-            // End response and flush it.
-            output.WriteLine();
-            output.Flush();
+                // End response and flush it.
+                output.WriteLine();
+                output.Flush();
+            })
+            ;
         }
 
         /// <summary>
         /// Handles LIST_LOCATIONS messages.
         /// </summary>
-        private static void ProcessListLocationsMessage(Stream con,StreamReader input, StreamWriter output, Logger log)
+        private static async void ProcessListLocationsMessage(Stream con,StreamReader input, StreamWriter output, Logger log)
         {
             // Request message payload is composed of a single line containing the file name.
             // The end of the message's payload is marked with an empty line
             string line = input.ReadLine();
             input.ReadLine();
-
             IPEndPoint[] fileLocations = Store.Instance.GetFileLocations(line);
 
             // Send response message. 
             // The message is composed of multiple lines and is terminated by an empty one.
             // Each line has the following format
             // <ipAddress>:<portNumber>
-            foreach (IPEndPoint endpoint in fileLocations)
-                output.WriteLine(string.Format("{0}:{1}", endpoint.Address, endpoint.Port));
+        await     Task.Factory.StartNew(() =>
+            {
+                foreach (IPEndPoint endpoint in fileLocations)
+                    output.WriteLine(string.Format("{0}:{1}", endpoint.Address, endpoint.Port));
 
-            // End response and flush it.
-            output.WriteLine();
-            output.Flush();
+                // End response and flush it.
+                output.WriteLine();
+                output.Flush();
+            });
         }
 
         #endregion
@@ -190,14 +206,17 @@ namespace MyServer
         /// <summary>
         /// Performs request servicing.
         /// </summary>
-        public void Run()
+        public async void Run()
         {
             try
             {
                 string requestType;
                 // Read request type (the request's first line)
-                while ((requestType = input.ReadLine()) != null && requestType!=string.Empty)
+
+               await Task.Factory.StartNew(async() => { requestType = await input.ReadLineAsync();
+                while (!string.IsNullOrEmpty(requestType))
                 {
+
                     requestType = requestType.ToUpper();
                     if (!MESSAGE_HANDLERS.ContainsKey(requestType))
                     {
@@ -205,23 +224,27 @@ namespace MyServer
                         return;
                     }
                     // Dispatch request processing
-                    MESSAGE_HANDLERS[requestType](con,input,output, log);
+                    MESSAGE_HANDLERS[requestType](con, input, output, log);
+
+                    requestType = await input.ReadLineAsync();
                     // }
                 }
-                log.LogMessage(" ::: "+requestType);
-            }
+                log.LogMessage(" ::: " + requestType);
+            })
+            ;
+        }
             catch (IOException ioe)
             {
                 // Connection closed by the client. Log it!
                 log.LogMessage(String.Format("Handler - Connection closed by client {0}", ioe));
             }
-            finally
+            /*finally
             {
                  input.Close();
                 output.Close();
                 con.Close();
                 client.Close();
-            }
+            }*/
         }
     }
 
@@ -271,14 +294,14 @@ namespace MyServer
 
         private void Accept(IAsyncResult ar)
         {
-            using (TcpClient socket = srv.EndAcceptTcpClient(ar))
-            {
+            TcpClient socket = srv.EndAcceptTcpClient(ar);
+            
                 socket.LingerState = new LingerOption(true, 10);
                 Console.WriteLine(String.Format("Listener - Connection established with {0}.",
                     socket.Client.RemoteEndPoint));
                 Handler protocolHandler = new Handler(socket, _log);
                 protocolHandler.Run();
-            }
+            
                 srv.BeginAcceptTcpClient(Accept, null);
         }
 

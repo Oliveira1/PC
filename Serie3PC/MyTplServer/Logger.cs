@@ -12,7 +12,7 @@
 using System;
 using System.IO;
 
-namespace MyServer
+namespace MyTplServer
 {
 	// Logger single-threaded.
 	public class Logger
