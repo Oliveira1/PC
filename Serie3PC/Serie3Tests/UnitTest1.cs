@@ -20,7 +20,7 @@ namespace Serie3Tests
         [TestMethod]
         public void Test_C_USERS_DOWNLOADS_ALL()
         {
-            // if null throws nullPointerException;
+          /*  // if null throws nullPointerException;
             string userName = Environment.UserName;
             if (userName == null) Assert.Fail("null UserName");
             String s = "Searching on C:\\Users\\" + userName + "\\Downloads\\";
@@ -34,7 +34,7 @@ namespace Serie3Tests
             foreach (var path in i.paths)
                 Console.WriteLine(path);
                 
-            }
+            }*/
         }
     }
 }
