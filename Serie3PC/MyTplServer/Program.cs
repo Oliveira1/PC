@@ -295,14 +295,16 @@ namespace MyTplServer
         private void Accept(IAsyncResult ar)
         {
             TcpClient socket = srv.EndAcceptTcpClient(ar);
-            
-                socket.LingerState = new LingerOption(true, 10);
+            srv.BeginAcceptTcpClient(Accept, null);
+            socket.LingerState = new LingerOption(true, 10);
                 Console.WriteLine(String.Format("Listener - Connection established with {0}.",
                     socket.Client.RemoteEndPoint));
+            Task.Factory.StartNew(() =>
+            {
                 Handler protocolHandler = new Handler(socket, _log);
                 protocolHandler.Run();
-            
-                srv.BeginAcceptTcpClient(Accept, null);
+            });
+                
         }
 
   
